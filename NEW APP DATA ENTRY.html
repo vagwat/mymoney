@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Neon Pro Secure Tracker</title>
+    <style>
+        :root {
+            --bg-body: #0f172a; --bg-card: #1e293b; --text-main: #f8fafc;
+            --accent-violet: #8b5cf6; --accent-pink: #ec4899; --accent-green: #10b981;
+            --neon-shadow: 0 0 15px rgba(139, 92, 246, 0.4);
+            --gradient: linear-gradient(135deg, #8b5cf6, #ec4899);
+        }
+        [data-theme="light"] {
+            --bg-body: #f0f2f5; --bg-card: #ffffff; --text-main: #333;
+            --neon-shadow: 0 0 10px rgba(139, 92, 246, 0.2);
+        }
+        body { font-family: 'Segoe UI', sans-serif; background-color: var(--bg-body); color: var(--text-main); margin: 0; transition: 0.3s; overflow-x: hidden; }
+        
+        /* --- Navigation --- */
+        nav { background: var(--bg-card); padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; box-shadow: var(--neon-shadow); position: sticky; top: 0; z-index: 100; }
+        .nav-brand { font-size: 22px; font-weight: bold; background: var(--gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; display: flex; align-items: center; gap: 10px; }
+        .menu-btn { background: transparent; border: none; color: var(--text-main); font-size: 24px; cursor: pointer; display: none; }
+        
+        .nav-links { display: flex; gap: 15px; align-items: center; }
+        .nav-links button { background: transparent; border: none; color: var(--text-main); cursor: pointer; font-weight: bold; padding: 8px 12px; border-radius: 8px; }
+        .nav-links button:hover { background: rgba(139, 92, 246, 0.1); color: var(--accent-pink); }
+        .user-info { display: flex; align-items: center; gap: 8px; border-left: 1px solid #444; padding-left: 15px; margin-left: 10px; }
+
+        /* --- Sidebar --- */
+        .sidebar { position: fixed; left: -260px; top: 0; width: 250px; height: 100%; background: var(--bg-card); box-shadow: var(--neon-shadow); transition: 0.3s; z-index: 1000; padding-top: 60px; border-right: 1px solid var(--accent-violet); }
+        .sidebar.active { left: 0; }
+        .sidebar button { width: 100%; text-align: left; padding: 15px 20px; background: transparent; border: none; color: var(--text-main); font-size: 16px; border-bottom: 1px solid rgba(255,255,255,0.05); cursor: pointer; }
+        .sidebar button:hover { background: rgba(139, 92, 246, 0.1); }
+
+        /* --- UI Components --- */
+        .container { padding: 30px 20px; display: flex; justify-content: center; flex-wrap: wrap; gap: 30px; min-height: 80vh; }
+        .glass-card { background: var(--bg-card); padding: 25px; border-radius: 15px; box-shadow: var(--neon-shadow); border: 1px solid rgba(255, 255, 255, 0.1); width: 100%; max-width: 400px; }
+        .full-width { max-width: 900px; }
+        
+        .btn-primary { width: 100%; background: var(--gradient); color: white; padding: 12px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; margin-top: 10px; }
+        .btn-logout { background: #ef4444 !important; }
+        
+        table { width: 100%; border-collapse: collapse; font-size: 14px; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid rgba(139, 92, 246, 0.1); }
+        tr:hover { background: rgba(139, 92, 246, 0.05); cursor: pointer; }
+
+        /* --- Modals --- */
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); display: none; justify-content: center; align-items: center; z-index: 2000; backdrop-filter: blur(5px); }
+        .modal-overlay.active { display: flex; }
+        .modal-content { background: var(--bg-card); padding: 30px; border-radius: 15px; width: 90%; max-width: 400px; border: 1px solid var(--accent-violet); position: relative; }
+
+        .hidden { display: none !important; }
+        @media (max-width: 768px) { .menu-btn { display: block; } .nav-links { display: none; } }
+    </style>
+</head>
+<body data-theme="dark">
+
+<nav>
+    <div class="nav-brand">
+        <button class="menu-btn auth-required hidden" onclick="toggleSidebar()">☰</button>
+        ⚡ BALAJI MARKETING
+    </div>
+    <div class="nav-links">
+        <div class="auth-required hidden" style="display:flex; gap:10px; align-items:center;">
+            <button onclick="switchView('dashboard')">➕ Entry</button>
+            <button onclick="switchView('allTx')">📊 Ledger</button>
+            <button onclick="toggleTheme()">🌙 Theme</button>
+            <div class="user-info" onclick="openProfile()">
+                <span id="navUserName" style="color:var(--accent-pink); cursor:pointer; font-weight:bold;">User</span>
+                <button class="btn-primary btn-logout" onclick="logout()" style="width:auto; padding:5px 10px; margin:0;">Exit</button>
+            </div>
+        </div>
+        <button class="no-auth" onclick="toggleTheme()">🌙 Theme</button>
+    </div>
+</nav>
+
+<div class="sidebar" id="sidebar">
+    <button onclick="toggleSidebar()" style="color:var(--accent-pink)">✖ Close Menu</button>
+    <button onclick="switchView('dashboard'); toggleSidebar()">➕ New Entry</button>
+    <button onclick="switchView('allTx'); toggleSidebar()">📊 All Transactions</button>
+    <button onclick="openProfile(); toggleSidebar()">👤 My Profile</button>
+    <button onclick="logout()" class="btn-logout">🚪 Logout</button>
+</div>
+
+<div class="container">
+    <div id="authSection" style="width:100%; display:flex; justify-content:center;">
+        <div class="glass-card" id="loginCard">
+            <h2>🔒 Secure Login</h2>
+            <p id="loginMsg" style="text-align:center; color:var(--accent-pink)"></p>
+            <form id="loginForm">
+                <div style="margin-bottom:15px;"><label>Username</label><input type="text" id="lUser" style="width:100%; padding:10px; box-sizing:border-box;" required></div>
+                <div style="margin-bottom:15px;"><label>Password</label><input type="password" id="lPass" style="width:100%; padding:10px; box-sizing:border-box;" required></div>
+                <button type="submit" class="btn-primary">Enter Dashboard</button>
+                <button type="button" class="btn-primary" style="background:transparent; border:1px solid var(--accent-violet); margin-top:10px;" onclick="toggleAuth('reg')">Create Account</button>
+            </form>
+        </div>
+
+        <div class="glass-card hidden" id="regCard">
+            <h2>📝 Register</h2>
+            <form id="regForm">
+                <input type="text" id="rName" placeholder="Full Name" style="width:100%; margin-bottom:10px; padding:10px; box-sizing:border-box;" required>
+                <input type="email" id="rEmail" placeholder="Email Address" style="width:100%; margin-bottom:10px; padding:10px; box-sizing:border-box;" required>
+                <input type="text" id="rMob" placeholder="Mobile Number" style="width:100%; margin-bottom:10px; padding:10px; box-sizing:border-box;" required>
+                <input type="text" id="rUser" placeholder="Choose Username" style="width:100%; margin-bottom:10px; padding:10px; box-sizing:border-box;" required>
+                <input type="password" id="rPass" placeholder="Set Password" style="width:100%; margin-bottom:10px; padding:10px; box-sizing:border-box;" required>
+                <button type="submit" class="btn-primary">Register Now</button>
+                <button type="button" class="btn-primary" style="background:transparent; border:1px solid var(--accent-violet);" onclick="toggleAuth('login')">Back to Login</button>
+            </form>
+        </div>
+
+        <div class="glass-card hidden" id="msgCard" style="text-align:center;">
+            <h2 style="color:var(--accent-green)">Success!</h2>
+            <p>Your request is sent to Admin.</p>
+            <p style="font-weight:bold; color:var(--accent-pink);">CONTACT OR WAIT FOR APPROVAL FROM ADMIN.</p>
+            <button class="btn-primary" onclick="toggleAuth('login')">OK</button>
+        </div>
+    </div>
+
+    <div id="appSection" class="hidden" style="width:100%;">
+        <div id="dashboardView" style="display:flex; flex-wrap:wrap; gap:30px; justify-content:center;">
+            <div class="glass-card">
+                <h2>➕ New Entry</h2>
+                <form id="txForm">
+                    <input type="text" id="tName" placeholder="Customer Name" style="width:100%; margin-bottom:10px; padding:10px; box-sizing:border-box;" required>
+                    <input type="number" id="tAmount" placeholder="Amount ₹" style="width:100%; margin-bottom:10px; padding:10px; box-sizing:border-box;" required>
+                    <button type="submit" class="btn-primary">🚀 Save Transaction</button>
+                </form>
+            </div>
+            <div class="glass-card">
+                <h2>🕒 Recent</h2>
+                <div id="recentBox">Loading...</div>
+            </div>
+        </div>
+
+        <div id="allTxView" class="glass-card full-width hidden" style="margin: 0 auto;">
+            <h2>📊 Transaction Ledger</h2>
+            <div style="overflow-x:auto;">
+                <table>
+                    <thead><tr><th>Date</th><th>Name</th><th>Amount</th><th>Action</th></tr></thead>
+                    <tbody id="txTableBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="profModal">
+    <div class="modal-content">
+        <button onclick="closeModal('profModal')" style="position:absolute; top:10px; right:10px; background:none; border:none; color:var(--accent-pink); font-size:20px; cursor:pointer;">✖</button>
+        <h2>👤 My Profile</h2>
+        <form id="updateProfForm">
+            <label>Full Name</label><input type="text" id="pName" style="width:100%; margin-bottom:10px; padding:8px; box-sizing:border-box;">
+            <label>Email</label><input type="email" id="pEmail" style="width:100%; margin-bottom:10px; padding:8px; box-sizing:border-box;">
+            <label>Mobile</label><input type="text" id="pMob" style="width:100%; margin-bottom:10px; padding:8px; box-sizing:border-box;">
+            <label>Change Password</label><input type="text" id="pPass" style="width:100%; margin-bottom:15px; padding:8px; box-sizing:border-box;">
+            <button type="submit" class="btn-primary">Update Profile</button>
+        </form>
+    </div>
+</div>
+
+<script>
+    const scriptURL = 'https://script.google.com/macros/s/AKfycbwjGeUTVZGS0nh6ooD6pHri0Zn06oRSAouqsnTjVhFMTABf5uRsuytCFH26hjeF6yrh/exec';
+    let userData = JSON.parse(localStorage.getItem('neonUserFull')) || null;
+    let transactions = [];
+
+    // --- Core Logic ---
+    window.onload = () => { if(userData) showApp(); else showAuth(); };
+
+    function showApp() {
+        document.getElementById('authSection').classList.add('hidden');
+        document.getElementById('appSection').classList.remove('hidden');
+        document.querySelectorAll('.auth-required').forEach(el => el.classList.remove('hidden'));
+        document.querySelectorAll('.no-auth').forEach(el => el.classList.add('hidden'));
+        document.getElementById('navUserName').innerText = userData.name;
+        switchView('dashboard');
+        loadData();
+    }
+
+    function showAuth() {
+        document.getElementById('authSection').classList.remove('hidden');
+        document.getElementById('appSection').classList.add('hidden');
+        document.querySelectorAll('.auth-required').forEach(el => el.classList.add('hidden'));
+        document.querySelectorAll('.no-auth').forEach(el => el.classList.remove('hidden'));
+        toggleAuth('login');
+    }
+
+    function logout() {
+        localStorage.clear();
+        userData = null;
+        window.location.reload(); // Hard refresh to clear everything
+    }
+
+    // --- Navigation ---
+    function switchView(v) {
+        document.getElementById('dashboardView').classList.toggle('hidden', v !== 'dashboard');
+        document.getElementById('allTxView').classList.toggle('hidden', v !== 'allTx');
+        if(v === 'allTx') renderTable();
+    }
+    function toggleSidebar() { document.getElementById('sidebar').classList.toggle('active'); }
+    function toggleAuth(v) {
+        document.getElementById('loginCard').classList.toggle('hidden', v !== 'login');
+        document.getElementById('regCard').classList.toggle('hidden', v !== 'reg');
+        document.getElementById('msgCard').classList.toggle('hidden', v !== 'msg');
+    }
+    function openModal(id) { document.getElementById(id).classList.add('active'); }
+    function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+    function toggleTheme() { document.body.setAttribute('data-theme', document.body.getAttribute('data-theme') === 'dark' ? 'light' : 'dark'); }
+
+    // --- Profile Logic ---
+    function openProfile() {
+        // Filling data from local memory
+        document.getElementById('pName').value = userData.name;
+        document.getElementById('pEmail').value = userData.email || "";
+        document.getElementById('pMob').value = userData.mobile || "";
+        document.getElementById('pPass').value = userData.password || "";
+        openModal('profModal');
+    }
+
+    // --- API Calls ---
+    async function loadData() {
+        const res = await fetch(scriptURL, { method: 'POST', body: JSON.stringify({ action: 'get_data', token: userData.token }) });
+        const json = await res.json();
+        if(json.success) {
+            transactions = json.data;
+            renderRecent();
+        }
+    }
+
+    document.getElementById('loginForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        document.getElementById('loginMsg').innerText = "Verifying...";
+        const res = await fetch(scriptURL, { method: 'POST', body: JSON.stringify({ 
+            action: 'login', 
+            username: document.getElementById('lUser').value, 
+            password: document.getElementById('lPass').value 
+        })});
+        const json = await res.json();
+        if(json.success) {
+            // Save full data including password for profile fill
+            userData = { 
+                token: json.token, 
+                name: json.name, 
+                username: document.getElementById('lUser').value,
+                password: document.getElementById('lPass').value
+            };
+            localStorage.setItem('neonUserFull', JSON.stringify(userData));
+            showApp();
+        } else {
+            document.getElementById('loginMsg').innerText = json.message;
+        }
+    });
+
+    document.getElementById('regForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        await fetch(scriptURL, { method: 'POST', body: JSON.stringify({
+            action: 'register',
+            name: document.getElementById('rName').value,
+            email: document.getElementById('rEmail').value,
+            mobile: document.getElementById('rMob').value,
+            username: document.getElementById('rUser').value,
+            password: document.getElementById('rPass').value
+        })});
+        toggleAuth('msg');
+    });
+
+    document.getElementById('txForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const btn = e.target.querySelector('button');
+        btn.innerText = "Saving...";
+        await fetch(scriptURL, { method: 'POST', body: JSON.stringify({
+            action: 'add_data',
+            token: userData.token,
+            txName: document.getElementById('tName').value,
+            txAmount: document.getElementById('tAmount').value
+        })});
+        e.target.reset();
+        btn.innerText = "🚀 Save Transaction";
+        loadData();
+    });
+
+    document.getElementById('updateProfForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const res = await fetch(scriptURL, { method: 'POST', body: JSON.stringify({
+            action: 'update_profile',
+            token: userData.token,
+            name: document.getElementById('pName').value,
+            email: document.getElementById('pEmail').value,
+            mobile: document.getElementById('pMob').value,
+            password: document.getElementById('pPass').value
+        })});
+        const json = await res.json();
+        if(json.success) {
+            userData.name = document.getElementById('pName').value;
+            userData.password = document.getElementById('pPass').value;
+            localStorage.setItem('neonUserFull', JSON.stringify(userData));
+            document.getElementById('navUserName').innerText = userData.name;
+            alert("Profile Updated!");
+            closeModal('profModal');
+        }
+    });
+
+    function renderRecent() {
+        const html = transactions.slice(0, 5).map(t => `
+            <div style="display:flex; justify-content:space-between; padding:10px; border-bottom:1px solid #444;">
+                <span>${t.name}</span><span style="color:var(--accent-pink)">₹${t.amount}</span>
+            </div>
+        `).join('');
+        document.getElementById('recentBox').innerHTML = html || "No data yet";
+    }
+
+    function renderTable() {
+        document.getElementById('txTableBody').innerHTML = transactions.map(t => `
+            <tr>
+                <td>${t.date}</td>
+                <td>${t.name}</td>
+                <td style="color:var(--accent-pink)">₹${t.amount}</td>
+                <td><button onclick="alert('Row ID: ${t.id}')" style="background:none; border:1px solid var(--accent-violet); color:white; font-size:10px; padding:2px 5px;">View</button></td>
+            </tr>
+        `).join('');
+    }
+</script>
+</body>
+</html>
